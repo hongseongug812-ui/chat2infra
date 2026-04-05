@@ -1,0 +1,101 @@
+:root {
+  /* 컬러 시스템 - 다크 터미널 + 네온 액센트 */
+  --bg-primary: #06080d;
+  --bg-secondary: #0c1019;
+  --bg-tertiary: #111827;
+  --bg-card: #0f1420;
+  --bg-card-hover: #151c2e;
+  --bg-input: #0c1019;
+
+  --border-primary: #1e293b;
+  --border-accent: #22d3ee33;
+  --border-danger: #ef444433;
+
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --text-muted: #475569;
+
+  --accent-cyan: #22d3ee;
+  --accent-cyan-dim: #22d3ee22;
+  --accent-green: #10b981;
+  --accent-green-dim: #10b98122;
+  --accent-red: #ef4444;
+  --accent-red-dim: #ef444422;
+  --accent-amber: #f59e0b;
+  --accent-amber-dim: #f59e0b22;
+  --accent-blue: #3b82f6;
+
+  --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --shadow-glow: 0 0 20px rgba(34, 211, 238, 0.08);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(30, 41, 59, 0.5);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 스크롤바 */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* 선택 영역 */
+::selection {
+  background: var(--accent-cyan);
+  color: var(--bg-primary);
+}
+
+/* 애니메이션 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes typing {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
+}
