@@ -4,3 +4,4 @@ logs/
 *.log
 client/build/
 .DS_Store
+server/data/

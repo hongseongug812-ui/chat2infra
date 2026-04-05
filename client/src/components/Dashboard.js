@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getInstances, getCost, killSwitch } from '../utils/api';
+import { getInstances, getCost, killSwitch, checkHealth } from '../utils/api';
 import {
-  Server, DollarSign, AlertTriangle, Power, PowerOff,
-  RefreshCw, Shield, Cpu, Globe, Clock
+  Server, DollarSign, AlertTriangle, PowerOff,
+  RefreshCw, Shield, Cpu, Globe, Clock, Wifi, WifiOff
 } from 'lucide-react';
 
 const styles = {
@@ -228,12 +228,13 @@ const styles = {
   },
 };
 
-export default function Dashboard() {
+export default function Dashboard({ isDemo = false }) {
   const [instances, setInstances] = useState([]);
   const [cost, setCost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [killSwitchActive, setKillSwitchActive] = useState(false);
+  const [connStatus, setConnStatus] = useState({ server: false, openai: false, aws: false, region: '' });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -246,14 +247,15 @@ export default function Dashboard() {
 
       if (instResult.status === 'fulfilled' && instResult.value.success) {
         setInstances(instResult.value.instances || []);
+        setConnStatus((prev) => ({ ...prev, aws: true }));
       }
       if (costResult.status === 'fulfilled' && costResult.value.success) {
         setCost(costResult.value);
       }
 
-      // 둘 다 실패한 경우
       if (instResult.status === 'rejected' && costResult.status === 'rejected') {
         setError('AWS 연결에 실패했습니다. 자격 증명을 확인해주세요.');
+        setConnStatus((prev) => ({ ...prev, aws: false }));
       }
     } catch (err) {
       setError('데이터를 불러오는데 실패했습니다.');
@@ -262,11 +264,22 @@ export default function Dashboard() {
     }
   }, []);
 
+  const fetchHealth = useCallback(async () => {
+    try {
+      await checkHealth();
+      setConnStatus((prev) => ({ ...prev, server: true }));
+    } catch {
+      setConnStatus({ server: false, openai: false, aws: false, region: '' });
+    }
+  }, []);
+
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000); // 30초마다 갱신
-    return () => clearInterval(interval);
-  }, [fetchData]);
+    fetchHealth();
+    const i1 = setInterval(fetchData, 30000);
+    const i2 = setInterval(fetchHealth, 10000);
+    return () => { clearInterval(i1); clearInterval(i2); };
+  }, [fetchData, fetchHealth]);
 
   const handleKillSwitch = async () => {
     if (!window.confirm('⚠️ 실행 중인 모든 인스턴스를 중지합니다.\n정말 진행하시겠습니까?')) return;
@@ -305,6 +318,30 @@ export default function Dashboard() {
       </div>
 
       <div style={styles.content}>
+        {/* 연결 상태 섹션 */}
+        <div style={styles.section}>
+          <div style={styles.sectionLabel}>연결 상태</div>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-md)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {[
+              { label: '서버', ok: connStatus.server },
+              { label: 'OpenAI', ok: connStatus.openai },
+              { label: `AWS ${connStatus.region ? `(${connStatus.region})` : ''}`, ok: connStatus.aws },
+            ].map(({ label, ok }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{label}</span>
+                <span style={{
+                  display: 'flex', alignItems: 'center', gap: '5px',
+                  fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 600,
+                  color: ok ? 'var(--accent-green)' : 'var(--accent-red)',
+                }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: ok ? 'var(--accent-green)' : 'var(--accent-red)', display: 'inline-block' }} />
+                  {ok ? 'connected' : 'disconnected'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {error && (
           <div style={styles.alertBanner}>
             <AlertTriangle size={14} />

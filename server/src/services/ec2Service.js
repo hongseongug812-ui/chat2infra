@@ -10,15 +10,20 @@ const {
   CreateSecurityGroupCommand,
   AuthorizeSecurityGroupIngressCommand,
 } = require('@aws-sdk/client-ec2');
+const store = require('../db/store');
 const logger = require('../utils/logger');
 
-const ec2 = new EC2Client({
-  region: process.env.AWS_REGION || 'ap-northeast-2',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
+function getEc2Client(awsConfig) {
+  const cfg = awsConfig || {};
+  const data = store.getAll();
+  return new EC2Client({
+    region: cfg.region || data.AWS_REGION || process.env.AWS_REGION || 'ap-northeast-2',
+    credentials: {
+      accessKeyId: cfg.accessKeyId || data.AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: cfg.secretAccessKey || data.AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  });
+}
 
 // 인스턴스 상태 한글 매핑
 const STATE_MAP = {
@@ -33,7 +38,7 @@ const STATE_MAP = {
 /**
  * 모든 EC2 인스턴스 조회
  */
-async function listInstances(filters = {}) {
+async function listInstances(awsConfig, filters = {}) {
   try {
     const params = {};
 
@@ -48,7 +53,7 @@ async function listInstances(filters = {}) {
     }
 
     const command = new DescribeInstancesCommand(params);
-    const response = await ec2.send(command);
+    const response = await getEc2Client(awsConfig).send(command);
 
     const instances = [];
     for (const reservation of response.Reservations || []) {
@@ -90,7 +95,7 @@ async function listInstances(filters = {}) {
 /**
  * EC2 인스턴스 생성
  */
-async function launchInstance({
+async function launchInstance(awsConfig, {
   name = 'Chat2Infra-Instance',
   instanceType = 't3.micro',
   imageId,
@@ -125,7 +130,7 @@ async function launchInstance({
     if (subnetId) params.SubnetId = subnetId;
 
     const command = new RunInstancesCommand(params);
-    const response = await ec2.send(command);
+    const response = await getEc2Client(awsConfig).send(command);
 
     const created = (response.Instances || []).map((inst) => ({
       instanceId: inst.InstanceId,
@@ -149,10 +154,10 @@ async function launchInstance({
 /**
  * EC2 인스턴스 시작
  */
-async function startInstances(instanceIds) {
+async function startInstances(awsConfig, instanceIds) {
   try {
     const command = new StartInstancesCommand({ InstanceIds: instanceIds });
-    const response = await ec2.send(command);
+    const response = await getEc2Client(awsConfig).send(command);
 
     const results = (response.StartingInstances || []).map((i) => ({
       instanceId: i.InstanceId,
@@ -171,10 +176,10 @@ async function startInstances(instanceIds) {
 /**
  * EC2 인스턴스 중지
  */
-async function stopInstances(instanceIds) {
+async function stopInstances(awsConfig, instanceIds) {
   try {
     const command = new StopInstancesCommand({ InstanceIds: instanceIds });
-    const response = await ec2.send(command);
+    const response = await getEc2Client(awsConfig).send(command);
 
     const results = (response.StoppingInstances || []).map((i) => ({
       instanceId: i.InstanceId,
@@ -193,10 +198,10 @@ async function stopInstances(instanceIds) {
 /**
  * EC2 인스턴스 종료 (삭제)
  */
-async function terminateInstances(instanceIds) {
+async function terminateInstances(awsConfig, instanceIds) {
   try {
     const command = new TerminateInstancesCommand({ InstanceIds: instanceIds });
-    const response = await ec2.send(command);
+    const response = await getEc2Client(awsConfig).send(command);
 
     const results = (response.TerminatingInstances || []).map((i) => ({
       instanceId: i.InstanceId,

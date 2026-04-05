@@ -3,20 +3,24 @@ const {
   GetCostAndUsageCommand,
   GetCostForecastCommand,
 } = require('@aws-sdk/client-cost-explorer');
+const store = require('../db/store');
 const logger = require('../utils/logger');
 
-const costExplorer = new CostExplorerClient({
-  region: 'us-east-1', // Cost Explorer는 항상 us-east-1
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
+function getCostClient() {
+  const data = store.getAll();
+  return new CostExplorerClient({
+    region: 'us-east-1', // Cost Explorer는 항상 us-east-1
+    credentials: {
+      accessKeyId: data.AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: data.AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  });
+}
 
 /**
  * 이번 달 비용 조회
  */
-async function getCurrentMonthCost() {
+async function getCurrentMonthCost(awsConfig) {
   try {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -33,7 +37,7 @@ async function getCurrentMonthCost() {
       GroupBy: [{ Type: 'DIMENSION', Key: 'SERVICE' }],
     });
 
-    const response = await costExplorer.send(command);
+    const response = await getCostClient(awsConfig).send(command);
     const results = response.ResultsByTime?.[0];
 
     if (!results) {
@@ -85,7 +89,7 @@ async function getCurrentMonthCost() {
 /**
  * 최근 7일 일별 비용 조회
  */
-async function getDailyCosts(days = 7) {
+async function getDailyCosts(awsConfig, days = 7) {
   try {
     const end = new Date();
     end.setDate(end.getDate() + 1);
@@ -101,7 +105,7 @@ async function getDailyCosts(days = 7) {
       Metrics: ['UnblendedCost'],
     });
 
-    const response = await costExplorer.send(command);
+    const response = await getCostClient(awsConfig).send(command);
 
     const dailyCosts = (response.ResultsByTime || []).map((period) => ({
       date: period.TimePeriod?.Start,
